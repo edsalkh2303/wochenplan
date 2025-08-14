@@ -237,37 +237,11 @@
             transform: translateY(-2px);
         }
 
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(255, 255, 255, 0.8);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
-
-        .loading-spinner {
-            border: 4px solid var(--border-color);
-            border-top: 4px solid var(--button-primary);
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        /* Lade-Spinner entfernt, da nicht mehr benötigt */
     </style>
 </head>
 <body>
-    <div id="loading-overlay" class="loading-overlay">
-        <div class="loading-spinner"></div>
-    </div>
+    <!-- Lade-Spinner entfernt -->
     
     <h1>📋 Wochenplan</h1>
     <div id="date"></div>
@@ -406,7 +380,6 @@
         const sharedDocumentId = 'wochenplan-familie-tim-meyer';
         const tasksCollectionName = 'sharedWeeklyPlans';
 
-        const loadingOverlay = document.getElementById('loading-overlay');
         const errorModal = document.getElementById('errorModal');
         const errorMessageElem = document.getElementById('errorMessage');
 
@@ -519,6 +492,8 @@
             special: []
         };
 
+        let currentTasksData = JSON.parse(JSON.stringify(initialTasksData));
+
         // Funktion zum Speichern der Daten in Firestore
         async function saveData(data) {
             try {
@@ -561,12 +536,12 @@
 
         // Funktion zum Rendern der Aufgaben in der UI
         function renderTasks(tasksData) {
+            currentTasksData = tasksData; // Aktualisiere den globalen Zustand
             document.querySelectorAll('.daily-tasks-list, .special-tasks-list').forEach(ul => {
                 const parentElement = ul.closest('.day, .special-tasks');
                 if (!parentElement) return;
                 const dayId = parentElement.id;
                 
-                // Für Sonderaufgaben wird ein anderer Schlüssel verwendet
                 const taskKey = dayId === 'special-tasks-div' ? 'special' : dayId;
                 const tasks = tasksData[taskKey] || [];
 
@@ -608,17 +583,17 @@
         }
 
         // Event-Listener für alle Buttons und Checkboxen
-        function setupEventListeners(tasksData) {
+        function setupEventListeners() {
             document.addEventListener('change', (e) => {
                 if (e.target.type === 'checkbox' && e.target.closest('li')) {
                     const li = e.target.closest('li');
                     const taskId = li.dataset.taskId;
                     const dayId = li.dataset.dayId;
                     
-                    const taskIndex = tasksData[dayId].findIndex(t => t.id === taskId);
+                    const taskIndex = currentTasksData[dayId].findIndex(t => t.id === taskId);
                     if (taskIndex !== -1) {
-                        tasksData[dayId][taskIndex].checked = e.target.checked;
-                        saveData(tasksData);
+                        currentTasksData[dayId][taskIndex].checked = e.target.checked;
+                        saveData(currentTasksData);
                     }
                 }
             });
@@ -635,8 +610,8 @@
                     if (button.classList.contains('delete-btn')) {
                         showConfirmModal("Möchtest du diese Aufgabe wirklich löschen?", (confirmed) => {
                             if (confirmed) {
-                                tasksData[dayId] = tasksData[dayId].filter(t => t.id !== taskId);
-                                saveData(tasksData);
+                                currentTasksData[dayId] = currentTasksData[dayId].filter(t => t.id !== taskId);
+                                saveData(currentTasksData);
                             }
                         });
                     }
@@ -655,13 +630,12 @@
 
                         const saveEdit = () => {
                             const newText = input.value.trim();
-                            const task = tasksData[dayId].find(t => t.id === taskId);
+                            const task = currentTasksData[dayId].find(t => t.id === taskId);
                             if (task && newText) {
                                 task.text = newText;
-                                saveData(tasksData);
+                                saveData(currentTasksData);
                             } else {
-                                // Wenn der Text leer ist, die Änderung verwerfen und zum Span zurückkehren
-                                renderTasks(tasksData);
+                                renderTasks(currentTasksData);
                             }
                         };
 
@@ -674,39 +648,34 @@
                     }
                 }
 
-                // Logik für Hinzufügen-Buttons
                 if (button.classList.contains('add-task-btn')) {
                     const container = button.closest('.add-task-container');
                     const input = container.querySelector('input[type="text"]');
                     const text = input.value.trim();
                     if (!text) return;
 
-                    // Hinzufügen von normalen Tagesaufgaben
                     if (button.closest('.day')) {
                         const dayId = button.closest('.day').id;
-                        tasksData[dayId].push({ id: crypto.randomUUID(), text, checked: false });
+                        currentTasksData[dayId].push({ id: crypto.randomUUID(), text, checked: false });
                     }
-                    // Hinzufügen von Sonderaufgaben
                     else if (button.id === 'add-special-task-btn') {
-                        tasksData.special.push({ id: crypto.randomUUID(), text, checked: false });
+                        currentTasksData.special.push({ id: crypto.randomUUID(), text, checked: false });
                     }
-                    // Hinzufügen von wiederkehrenden Aufgaben
                     else if (button.id === 'add-recurring-task-btn') {
                         const daySelect = document.getElementById('recurring-task-day-select');
                         const selectedDay = daySelect.value;
-                        tasksData[selectedDay].push({ id: crypto.randomUUID(), text, checked: false, isWeekly: true });
+                        currentTasksData[selectedDay].push({ id: crypto.randomUUID(), text, checked: false, isWeekly: true });
                     }
 
                     input.value = '';
-                    saveData(tasksData);
+                    saveData(currentTasksData);
                 }
 
-                // Logik für Reset-Button
                 if (button.id === "resetBtn") {
                     showConfirmModal("Möchtest du wirklich alle Aufgaben zurücksetzen? Dies löscht auch alle eigenen Einträge.", (confirmed) => {
                         if (confirmed) {
                             const freshData = initializeDataWithAbfuhrtermine(JSON.parse(JSON.stringify(initialTasksData)));
-                            saveData(freshData); // Speichert die initialen Daten in Firebase
+                            saveData(freshData);
                             localStorage.removeItem('lastWeekReset');
                         }
                     });
@@ -761,7 +730,6 @@
             days.forEach(day => {
                 if (updatedData[day]) {
                     updatedData[day].forEach(task => {
-                        // Setzt wöchentliche und tägliche Aufgaben zurück
                         if (task.isWeekly || task.isDaily) {
                             task.checked = false;
                         }
@@ -786,7 +754,9 @@
             return processedData;
         }
 
-        document.addEventListener("DOMContentLoaded", async function () {
+        // Hauptfunktion, die beim Laden der Seite ausgeführt wird
+        document.addEventListener("DOMContentLoaded", function () {
+            // 1. Sofort die UI mit den Standarddaten aufbauen
             const dateToday = new Date();
             document.getElementById("date").textContent = dateToday.toLocaleDateString("de-DE", {
                 weekday: "long", year: "numeric", month: "long", day: "numeric"
@@ -810,58 +780,54 @@
             });
             container.appendChild(specialTasksDiv);
 
-            try {
-                await signInAnonymously(auth);
-                
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        const docRef = doc(db, tasksCollectionName, sharedDocumentId);
-                        
-                        let isFirstLoad = true;
-                        onSnapshot(docRef, (docSnapshot) => {
-                            let tasksData;
-                            if (docSnapshot.exists()) {
-                                tasksData = docSnapshot.data();
-                            } else {
-                                // Wenn das Dokument nicht existiert, erstelle es mit den Startdaten
-                                console.log("Kein Plan gefunden, erstelle einen neuen.");
-                                tasksData = JSON.parse(JSON.stringify(initialTasksData));
-                            }
-                            
-                            const processedData = processTasksData(tasksData);
+            // Zeige sofort die initialen Aufgaben an
+            renderTasks(currentTasksData);
+            setupEventListeners();
 
-                            if (isFirstLoad) {
-                                setupEventListeners(processedData);
-                                isFirstLoad = false;
-                            }
+            // 2. Im Hintergrund die Verbindung zu Firebase aufbauen und Daten laden
+            async function connectToFirebase() {
+                try {
+                    await signInAnonymously(auth);
+                    
+                    onAuthStateChanged(auth, (user) => {
+                        if (user) {
+                            const docRef = doc(db, tasksCollectionName, sharedDocumentId);
                             
-                            // Nur speichern, wenn sich die Daten nach der Verarbeitung geändert haben
-                            if (JSON.stringify(tasksData) !== JSON.stringify(processedData)) {
-                                saveData(processedData);
-                            }
-                            
-                            renderTasks(processedData);
-                            loadingOverlay.style.display = 'none';
-                        }, (error) => {
-                            showErrorModal("Fehler beim Laden der Daten: " + error.message);
-                            console.error("Fehler beim onSnapshot:", error);
-                            loadingOverlay.style.display = 'none';
-                        });
-                    } else {
-                        showErrorModal("Benutzer nicht authentifiziert. Bitte versuche, die Seite neu zu laden.");
-                        loadingOverlay.style.display = 'none';
-                    }
-                });
+                            onSnapshot(docRef, (docSnapshot) => {
+                                let tasksDataFromDb;
+                                if (docSnapshot.exists()) {
+                                    tasksDataFromDb = docSnapshot.data();
+                                } else {
+                                    console.log("Kein Plan gefunden, erstelle einen neuen.");
+                                    tasksDataFromDb = JSON.parse(JSON.stringify(initialTasksData));
+                                }
+                                
+                                const processedData = processTasksData(tasksDataFromDb);
+                                
+                                if (JSON.stringify(currentTasksData) !== JSON.stringify(processedData)) {
+                                    saveData(processedData);
+                                }
+                                
+                                // Rendere die UI mit den neuen Daten von Firebase
+                                renderTasks(processedData);
 
-            } catch (e) {
-                if (e.code === 'auth/configuration-not-found' || e.message.includes("apiKey")) {
-                    showErrorModal("FEHLER: Die Firebase-Konfiguration ist ungültig oder unvollständig. Bitte überprüfe, ob du deine Daten aus Schritt 1 korrekt eingefügt hast.");
-                } else {
+                            }, (error) => {
+                                showErrorModal("Fehler beim Laden der Daten: " + error.message);
+                                console.error("Fehler beim onSnapshot:", error);
+                            });
+                        } else {
+                            showErrorModal("Benutzer nicht authentifiziert. Bitte versuche, die Seite neu zu laden.");
+                        }
+                    });
+
+                } catch (e) {
                     showErrorModal("Kritischer Fehler bei der App-Initialisierung: " + e.message);
+                    console.error("Kritischer Fehler bei der App-Initialisierung:", e);
                 }
-                console.error("Kritischer Fehler bei der App-Initialisierung:", e);
-                loadingOverlay.style.display = 'none';
             }
+
+            // Starte die Firebase-Verbindung
+            connectToFirebase();
         });
     </script>
 </body>
