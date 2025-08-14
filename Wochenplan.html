@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wochenplan</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        /* Modernes Farbschema */
+        :root {
+            --primary-bg-color: #f7f9fc;
+            --secondary-bg-color: #ffffff;
+            --border-color: #e2e8f0;
+            --text-color: #334e68;
+            --heading-color: #2a4158;
+            --button-primary: #4a90e2;
+            --button-danger: #d9534f;
+        }
+
+        /* Allgemeine Stile */
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            background: var(--primary-bg-color);
+            color: var(--text-color);
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: var(--heading-color);
+            font-weight: 600;
+        }
+        
+        h2 {
+            margin-top: 0;
+            color: var(--heading-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        #date {
+            text-align: right;
+            font-size: 14px;
+            color: #6e84a3;
+            margin-bottom: 20px;
+        }
+
+        #container, .recurring-tasks-container {
+            max-width: 800px;
+            margin: auto;
+        }
+
+        .day, .special-tasks, .recurring-tasks-container {
+            background: var(--secondary-bg-color);
+            padding: 25px;
+            margin-bottom: 25px;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            transition: transform 0.2s;
+        }
+        .day:hover, .special-tasks:hover, .recurring-tasks-container:hover {
+            transform: translateY(-5px);
+        }
+
+        ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        li {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            position: relative;
+        }
+
+        input[type="checkbox"] {
+            transform: scale(1.3);
+            flex-shrink: 0;
+            accent-color: var(--button-primary);
+        }
+        
+        .task-text {
+            flex-grow: 1;
+            font-size: 1.1em;
+            transition: text-decoration 0.2s;
+        }
+
+        .task-text.completed {
+            text-decoration: line-through;
+            color: #829ab1;
+        }
+
+        .task-buttons {
+            margin-left: auto;
+            flex-shrink: 0;
+            display: flex;
+            gap: 8px;
+        }
+
+        .edit-btn, .move-btn, .delete-btn {
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 1.2em;
+            padding: 8px;
+            color: #829ab1;
+            transition: color 0.2s;
+        }
+
+        .edit-btn:hover {
+            color: var(--button-primary);
+        }
+        .delete-btn:hover {
+            color: var(--button-danger);
+        }
+        .move-btn:hover {
+            color: #5cb85c;
+        }
+
+        .abfuhr {
+            font-weight: 600;
+            color: var(--heading-color);
+        }
+        
+        .add-task-container {
+            display: flex;
+            margin-top: 20px;
+            gap: 10px;
+            flex-wrap: wrap; /* Ermöglicht Umbruch auf kleinen Bildschirmen */
+        }
+
+        .add-task-container input, .add-task-container select {
+            flex-grow: 1;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            font-size: 1em;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            background-color: white;
+        }
+        .add-task-container input:focus, .add-task-container select:focus {
+            border-color: var(--button-primary);
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+        }
+        
+        .add-task-container select {
+             flex-basis: 150px; /* Gibt dem Select eine Basisbreite */
+             flex-grow: 0;
+        }
+
+        .add-task-container button, #resetBtn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.2s, transform 0.2s;
+        }
+        .add-task-btn {
+            background-color: var(--button-primary);
+            color: white;
+        }
+        .add-task-btn:hover {
+            background-color: #3b76c0;
+            transform: translateY(-2px);
+        }
+
+        #resetBtn {
+            margin: 30px auto;
+            display: block;
+            background-color: var(--button-danger);
+            color: white;
+        }
+        #resetBtn:hover {
+            background-color: #c9302c;
+            transform: translateY(-2px);
+        }
+        
+        /* Modal-Styling */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.4);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: var(--secondary-bg-color);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            max-width: 400px;
+            text-align: center;
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .modal-buttons button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s;
+            border: none;
+        }
+        .modal-buttons button.confirm-yes {
+            background-color: var(--button-danger);
+            color: white;
+        }
+        .modal-buttons button.confirm-no {
+            background-color: var(--border-color);
+            color: var(--text-color);
+        }
+        .modal-buttons button:hover {
+            transform: translateY(-2px);
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .loading-spinner {
+            border: 4px solid var(--border-color);
+            border-top: 4px solid var(--button-primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+    
+    <h1>📋 Wochenplan</h1>
+    <div id="date"></div>
+
+    <div id="container">
+        <!-- Die Wochentage werden hier dynamisch eingefügt und umsortiert -->
+        <div class="day" id="Montag">
+            <h2>Montag</h2>
+            <ul class="daily-tasks-list"></ul>
+            <div class="add-task-container">
+                <input type="text" placeholder="Neue Aufgabe hinzufügen..." class="new-daily-task-input">
+                <button class="add-task-btn">Hinzufügen</button>
+            </div>
+        </div>
+        <div class="day" id="Dienstag">
+            <h2>Dienstag</h2>
+            <ul class="daily-tasks-list"></ul>
+            <div class="add-task-container">
+                <input type="text" placeholder="Neue Aufgabe hinzufügen..." class="new-daily-task-input">
+                <button class="add-task-btn">Hinzufügen</button>
+            </div>
+        </div>
+        <div class="day" id="Mittwoch">
+            <h2>Mittwoch</h2>
+            <ul class="daily-tasks-list"></ul>
+            <div class="add-task-container">
+                <input type="text" placeholder="Neue Aufgabe hinzufügen..." class="new-daily-task-input">
+                <button class="add-task-btn">Hinzufügen</button>
+            </div>
+        </div>
+        <div class="day" id="Donnerstag">
+            <h2>Donnerstag</h2>
+            <ul class="daily-tasks-list"></ul>
+            <div class="add-task-container">
+                <input type="text" placeholder="Neue Aufgabe hinzufügen..." class="new-daily-task-input">
+                <button class="add-task-btn">Hinzufügen</button>
+            </div>
+        </div>
+        <div class="day" id="Freitag">
+            <h2>Freitag</h2>
+            <ul class="daily-tasks-list"></ul>
+            <div class="add-task-container">
+                <input type="text" placeholder="Neue Aufgabe hinzufügen..." class="new-daily-task-input">
+                <button class="add-task-btn">Hinzufügen</button>
+            </div>
+        </div>
+        <div class="day" id="Samstag">
+            <h2>Samstag</h2>
+            <ul class="daily-tasks-list"></ul>
+            <div class="add-task-container">
+                <input type="text" placeholder="Neue Aufgabe hinzufügen..." class="new-daily-task-input">
+                <button class="add-task-btn">Hinzufügen</button>
+            </div>
+        </div>
+        <div class="day" id="Sonntag">
+            <h2>Sonntag</h2>
+            <ul class="daily-tasks-list"></ul>
+            <div class="add-task-container">
+                <input type="text" placeholder="Neue Aufgabe hinzufügen..." class="new-daily-task-input">
+                <button class="add-task-btn">Hinzufügen</button>
+            </div>
+        </div>
+
+        <div class="special-tasks" id="special-tasks-div">
+            <h2>🚀 Sonderaufgaben</h2>
+            <ul class="special-tasks-list"></ul>
+            <div class="add-task-container">
+                <input type="text" placeholder="Neue Sonderaufgabe hinzufügen..." id="new-special-task-input">
+                <button id="add-special-task-btn" class="add-task-btn">Hinzufügen</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="recurring-tasks-container">
+        <h2>🔄 Wiederkehrende Aufgabe hinzufügen</h2>
+        <div class="add-task-container">
+            <input type="text" placeholder="Aufgabe..." id="new-recurring-task-input">
+            <select id="recurring-task-day-select">
+                <option value="Montag">Montag</option>
+                <option value="Dienstag">Dienstag</option>
+                <option value="Mittwoch">Mittwoch</option>
+                <option value="Donnerstag">Donnerstag</option>
+                <option value="Freitag">Freitag</option>
+                <option value="Samstag">Samstag</option>
+                <option value="Sonntag">Sonntag</option>
+            </select>
+            <button id="add-recurring-task-btn" class="add-task-btn">Hinzufügen</button>
+        </div>
+    </div>
+
+    <button id="resetBtn">🔁 Neu starten</button>
+
+    <!-- Custom Confirmation Modal -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <p id="modalMessage"></p>
+            <div class="modal-buttons">
+                <button id="confirmYes" class="confirm-yes">Ja</button>
+                <button id="confirmNo" class="confirm-no">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="errorModal" class="modal">
+        <div class="modal-content">
+            <p id="errorMessage"></p>
+            <div class="modal-buttons">
+                <button id="closeErrorModal" class="confirm-no">Schließen</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Firebase-Bibliotheken importieren
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Deine persönliche Firebase Konfiguration
+        const firebaseConfig = {
+          apiKey: "AIzaSyAlNgcd42mi5KvKARZVhYf2ioy-yuu6mBk",
+          authDomain: "mein-wochenplan.firebaseapp.com",
+          projectId: "mein-wochenplan",
+          storageBucket: "mein-wochenplan.firebasestorage.app",
+          messagingSenderId: "31422697606",
+          appId: "1:31422697606:web:2b1d3c6f4e0efebf2b4107"
+        };
+        
+        // Firebase initialisieren
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // Dies ist die feste ID für euren gemeinsamen Plan.
+        const sharedDocumentId = 'wochenplan-familie-tim-meyer';
+        const tasksCollectionName = 'sharedWeeklyPlans';
+
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const errorModal = document.getElementById('errorModal');
+        const errorMessageElem = document.getElementById('errorMessage');
+
+        function showErrorModal(message) {
+            errorMessageElem.textContent = message;
+            errorModal.style.display = 'flex';
+        }
+
+        document.getElementById('closeErrorModal').addEventListener('click', () => {
+            errorModal.style.display = 'none';
+        });
+
+        // Müllabfuhrtermine
+        const abfuhrtermine = [
+            { datum: "2025-01-08", art: "📦 Altpapier" },
+            { datum: "2025-01-10", art: "🛍️ Gelber Sack" },
+            { datum: "2025-01-24", art: "⚫ Hausmüll (14-täglich)" },
+            { datum: "2025-01-24", art: "⚫ Hausmüll (4-wöchentlich)" },
+            { datum: "2025-02-07", art: "🛍️ Gelber Sack" },
+            { datum: "2025-02-07", art: "⚫ Hausmüll (14-täglich)" },
+            { datum: "2025-02-21", art: "⚫ Hausmüll (14-täglich)" },
+            { datum: "2025-02-21", art: "⚫ Hausmüll (4-wöchentlich)" },
+            { datum: "2025-02-27", art: "🍃 Biotonne" },
+            { datum: "2025-03-05", art: "📦 Altpapier" },
+            { datum: "2025-03-07", art: "🛍️ Gelber Sack" },
+            { datum: "2025-03-07", art: "⚫ Hausmüll (14-täglich)" },
+            { datum: "2025-03-21", art: "⚫ Hausmüll (14-täglich)" },
+            { datum: "2025-03-21", art: "⚫ Hausmüll (4-wöchentlich)" },
+            { datum: "2025-04-02", art: "📦 Altpapier" },
+            { datum: "2025-04-04", art: "🛍️ Gelber Sack" },
+            { datum: "2025-04-04", art: "⚫ Hausmüll (4-wöchentlich)" },
+            { datum: "2025-04-17", art: "⚫ Hausmüll (14-täglich)" },
+            { datum: "2025-04-17", art: "⚫ Hausmüll (4-wöchentlich)" },
+            { datum: "2025-04-25", art: "🍃 Biotonne" },
+            { datum: "2025-04-30", art: "📦 Altpapier" },
+            { datum: "2025-05-03", art: "🛍️ Gelber Sack" },
+            { datum: "2025-05-03", art: "⚫ Hausmüll (4-wöchentlich)" },
+            { datum: "2025-05-16", art: "⚫ Hausmüll (14-täglich)" },
+            { datum: "2025-05-16", art: "⚫ Hausmüll (4-wöchentlich)" },
+            { datum: "2025-05-22", art: "🍃 Biotonne" },
+            { datum: "2025-05-28", art: "📦 Altpapier" },
+            { datum: "2025-05-30", art: "🍂 Grünabfall" },
+            { datum: "2025-05-31", art: "🛍️ Gelber Sack" },
+            { datum: "2025-05-31", art: "⚫ Hausmüll (14-täglich)" },
+            { datum: "2025-06-05", art: "🍃 Biotonne" },
+            { datum: "2025-06-13", art: "⚫ Hausmüll (14-täglich)" },
+            { datum: "2025-06-13", art: "⚫ Hausmüll (4-wöchentlich)" },
+            { datum: "2025-06-25", art: "📦 Altpapier" },
+            { datum: "2025-06-26", art: "🍂 Grünabfall" },
+            { datum: "2025-06-27", art: "🛍️ Gelber Sack" },
+            { datum: "2025-06-27", art: "⚫ Hausmüll (14-täglich)" },
+            { datum: "2025-07-17", art: "🍃 Biotonne" },
+            { datum: "2025-07-23", art: "📦 Altpapier" },
+            { datum: "2025-07-24", art: "🍂 Grünabfall" },
+            { datum: "2025-07-25", art: "🛍️ Gelber Sack" },
+            { datum: "2025-07-25", art: "⚫ Hausmüll (14-täglich)" },
+            { datum: "2025-07-25", art: "⚫ Hausmüll (4-wöchentlich)" },
+            { datum: "2025-07-31", art: "🍃 Biotonne" },
+            { datum: "2025-08-08", art: "⚫ Hausmüll (14-täglich)" },
+            { datum: "2025-08-08", art: "⚫ Hausmüll (4-wöchentlich)" },
+            { datum: "2025-08-14", art: "🍃 Biotonne" },
+            { datum: "2025-08-20", art: "📦 Altpapier" },
+            { datum: "2025-08-21", art: "🍂 Grünabfall" },
+            { datum: "2025-08-22", art: "🛍️ Gelber Sack" },
+            { datum: "2025-08-28", art: "🍃 Biotonne" }
+        ];
+
+        // Startdaten für die Wochenaufgaben
+        const initialTasksData = {
+            Montag: [
+                { id: crypto.randomUUID(), text: "Bettwäsche wechseln (alle 2–3 Wochen)", checked: false, isWeekly: true },
+                { id: crypto.randomUUID(), text: "Handtücher wechseln", checked: false, isWeekly: true },
+                { id: crypto.randomUUID(), text: "Badezimmer putzen", checked: false, isWeekly: true },
+                { id: crypto.randomUUID(), text: "Hühner füttern", checked: false, isDaily: true }
+            ],
+            Dienstag: [
+                { id: crypto.randomUUID(), text: "Staubsaugen oben", checked: false, isWeekly: true },
+                { id: crypto.randomUUID(), text: "Hühnerstall säubern", checked: false, isWeekly: true },
+                { id: crypto.randomUUID(), text: "Pflanzen gießen", checked: false, isWeekly: true },
+                { id: crypto.randomUUID(), text: "Einkaufsliste planen", checked: false, isWeekly: true },
+                { id: crypto.randomUUID(), text: "Hühner füttern", checked: false, isDaily: true }
+            ],
+            Mittwoch: [
+                { id: crypto.randomUUID(), text: "Einkaufen", checked: false, isWeekly: true },
+                { id: crypto.randomUUID(), text: "Staub wischen", checked: false, isWeekly: true },
+                { id: crypto.randomUUID(), text: "Spielzeug rotieren", checked: false, isWeekly: true },
+                { id: crypto.randomUUID(), text: "Kamin reinigen", checked: false, isWeekly: true },
+                { id: crypto.randomUUID(), text: "Hühner füttern", checked: false, isDaily: true }
+            ],
+            Donnerstag: [
+                { id: crypto.randomUUID(), text: "Staubsaugen unten", checked: false, isWeekly: true },
+                { id: crypto.randomUUID(), text: "Boden wischen", checked: false, isWeekly: true },
+                { id: crypto.randomUUID(), text: "Hühner füttern", checked: false, isDaily: true }
+            ],
+            Freitag: [
+                { id: crypto.randomUUID(), text: "Nächste Woche planen", checked: false, isWeekly: true },
+                { id: crypto.randomUUID(), text: "Arbeitsflächen reinigen", checked: false, isWeekly: true },
+                { id: crypto.randomUUID(), text: "Kühlschrank auswischen", checked: false, isWeekly: true },
+                { id: crypto.randomUUID(), text: "Mülleimer leeren & waschen", checked: false, isWeekly: true },
+                { id: crypto.randomUUID(), text: "Herd & Backofen reinigen", checked: false, isWeekly: true },
+                { id: crypto.randomUUID(), text: "Hühner füttern", checked: false, isDaily: true }
+            ],
+            Samstag: [
+                { id: crypto.randomUUID(), text: "Hühner füttern", checked: false, isDaily: true }
+            ],
+            Sonntag: [
+                { id: crypto.randomUUID(), text: "Entspannter Familienzeit-Tag", checked: false, isWeekly: true },
+                { id: crypto.randomUUID(), text: "Hühner füttern", checked: false, isDaily: true }
+            ],
+            special: []
+        };
+
+        // Funktion zum Speichern der Daten in Firestore
+        async function saveData(data) {
+            try {
+                const docRef = doc(db, tasksCollectionName, sharedDocumentId);
+                await setDoc(docRef, data);
+            } catch (e) {
+                showErrorModal("Fehler beim Speichern der Daten: " + e.message);
+                console.error("Fehler beim Speichern der Daten: ", e);
+            }
+        }
+
+        // Custom Modal-Funktion
+        function showConfirmModal(message, onConfirm) {
+            const modal = document.getElementById('confirmModal');
+            document.getElementById('modalMessage').textContent = message;
+            modal.style.display = 'flex';
+
+            const confirmYesBtn = document.getElementById('confirmYes');
+            const confirmNoBtn = document.getElementById('confirmNo');
+            
+            confirmYesBtn.replaceWith(confirmYesBtn.cloneNode(true));
+            confirmNoBtn.replaceWith(confirmNoBtn.cloneNode(true));
+            
+            const newConfirmYesBtn = document.getElementById('confirmYes');
+            const newConfirmNoBtn = document.getElementById('confirmNo');
+
+            const handleYes = () => {
+                onConfirm(true);
+                modal.style.display = 'none';
+            };
+
+            const handleNo = () => {
+                onConfirm(false);
+                modal.style.display = 'none';
+            };
+
+            newConfirmYesBtn.addEventListener('click', handleYes);
+            newConfirmNoBtn.addEventListener('click', handleNo);
+        }
+
+        // Funktion zum Rendern der Aufgaben in der UI
+        function renderTasks(tasksData) {
+            document.querySelectorAll('.daily-tasks-list, .special-tasks-list').forEach(ul => {
+                const parentElement = ul.closest('.day, .special-tasks');
+                if (!parentElement) return;
+                const dayId = parentElement.id;
+                
+                // Für Sonderaufgaben wird ein anderer Schlüssel verwendet
+                const taskKey = dayId === 'special-tasks-div' ? 'special' : dayId;
+                const tasks = tasksData[taskKey] || [];
+
+                const completedTasks = tasks.filter(task => task.checked);
+                const incompleteTasks = tasks.filter(task => !task.checked);
+                const sortedTasks = incompleteTasks.concat(completedTasks);
+
+                ul.innerHTML = '';
+                
+                sortedTasks.forEach((task) => {
+                    const li = document.createElement("li");
+                    li.dataset.taskId = task.id;
+                    li.dataset.dayId = taskKey;
+                    
+                    const isAbfuhrTask = task.text.includes("rausstellen");
+                    let taskTextClass = 'task-text';
+                    if (task.checked) {
+                        taskTextClass += ' completed';
+                    }
+                    if (isAbfuhrTask) {
+                        taskTextClass += ' abfuhr';
+                    }
+                    
+                    const buttonsHtml = `
+                        <button class="edit-btn" title="Bearbeiten">📝</button>
+                        <button class="delete-btn" title="Löschen">❌</button>
+                    `;
+
+                    li.innerHTML = `
+                        <input type="checkbox" id="checkbox-${task.id}" ${task.checked ? 'checked' : ''}>
+                        <span class="${taskTextClass}">${task.text}</span>
+                        <div class="task-buttons">
+                            ${buttonsHtml}
+                        </div>
+                    `;
+                    ul.appendChild(li);
+                });
+            });
+        }
+
+        // Event-Listener für alle Buttons und Checkboxen
+        function setupEventListeners(tasksData) {
+            document.addEventListener('change', (e) => {
+                if (e.target.type === 'checkbox' && e.target.closest('li')) {
+                    const li = e.target.closest('li');
+                    const taskId = li.dataset.taskId;
+                    const dayId = li.dataset.dayId;
+                    
+                    const taskIndex = tasksData[dayId].findIndex(t => t.id === taskId);
+                    if (taskIndex !== -1) {
+                        tasksData[dayId][taskIndex].checked = e.target.checked;
+                        saveData(tasksData);
+                    }
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                const button = e.target.closest('button');
+                if (!button) return;
+
+                const li = button.closest('li');
+                if (li) {
+                    const taskId = li.dataset.taskId;
+                    const dayId = li.dataset.dayId;
+
+                    if (button.classList.contains('delete-btn')) {
+                        showConfirmModal("Möchtest du diese Aufgabe wirklich löschen?", (confirmed) => {
+                            if (confirmed) {
+                                tasksData[dayId] = tasksData[dayId].filter(t => t.id !== taskId);
+                                saveData(tasksData);
+                            }
+                        });
+                    }
+
+                    if (button.classList.contains('edit-btn')) {
+                        const taskTextSpan = li.querySelector('.task-text');
+                        const currentText = taskTextSpan.textContent;
+                        
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.value = currentText;
+                        input.classList.add('task-text');
+                        
+                        taskTextSpan.replaceWith(input);
+                        input.focus();
+
+                        const saveEdit = () => {
+                            const newText = input.value.trim();
+                            const task = tasksData[dayId].find(t => t.id === taskId);
+                            if (task && newText) {
+                                task.text = newText;
+                                saveData(tasksData);
+                            } else {
+                                // Wenn der Text leer ist, die Änderung verwerfen und zum Span zurückkehren
+                                renderTasks(tasksData);
+                            }
+                        };
+
+                        input.addEventListener('blur', saveEdit);
+                        input.addEventListener('keypress', (e) => {
+                            if (e.key === 'Enter') {
+                                input.blur();
+                            }
+                        });
+                    }
+                }
+
+                // Logik für Hinzufügen-Buttons
+                if (button.classList.contains('add-task-btn')) {
+                    const container = button.closest('.add-task-container');
+                    const input = container.querySelector('input[type="text"]');
+                    const text = input.value.trim();
+                    if (!text) return;
+
+                    // Hinzufügen von normalen Tagesaufgaben
+                    if (button.closest('.day')) {
+                        const dayId = button.closest('.day').id;
+                        tasksData[dayId].push({ id: crypto.randomUUID(), text, checked: false });
+                    }
+                    // Hinzufügen von Sonderaufgaben
+                    else if (button.id === 'add-special-task-btn') {
+                        tasksData.special.push({ id: crypto.randomUUID(), text, checked: false });
+                    }
+                    // Hinzufügen von wiederkehrenden Aufgaben
+                    else if (button.id === 'add-recurring-task-btn') {
+                        const daySelect = document.getElementById('recurring-task-day-select');
+                        const selectedDay = daySelect.value;
+                        tasksData[selectedDay].push({ id: crypto.randomUUID(), text, checked: false, isWeekly: true });
+                    }
+
+                    input.value = '';
+                    saveData(tasksData);
+                }
+
+                // Logik für Reset-Button
+                if (button.id === "resetBtn") {
+                    showConfirmModal("Möchtest du wirklich alle Aufgaben zurücksetzen? Dies löscht auch alle eigenen Einträge.", (confirmed) => {
+                        if (confirmed) {
+                            const freshData = initializeDataWithAbfuhrtermine(JSON.parse(JSON.stringify(initialTasksData)));
+                            saveData(freshData); // Speichert die initialen Daten in Firebase
+                            localStorage.removeItem('lastWeekReset');
+                        }
+                    });
+                }
+            });
+        }
+        
+        function getPreviousDay(date) {
+            const previousDay = new Date(date);
+            previousDay.setDate(date.getDate() - 1);
+            return previousDay;
+        }
+        
+        function getStartOfWeek(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Wochenanfang ist Montag
+            return new Date(d.setDate(diff));
+        }
+
+        function initializeDataWithAbfuhrtermine(tasksData) {
+            const dateToday = new Date();
+            const startOfWeek = getStartOfWeek(dateToday);
+            startOfWeek.setHours(0, 0, 0, 0);
+            
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(startOfWeek.getDate() + 6);
+            endOfWeek.setHours(23, 59, 59, 999);
+            
+            const daysOfWeek = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+
+            abfuhrtermine.forEach(({ datum, art }) => {
+                const abfuhrDate = new Date(datum);
+                const dayBeforeAbfuhr = getPreviousDay(abfuhrDate);
+
+                if (dayBeforeAbfuhr >= startOfWeek && dayBeforeAbfuhr <= endOfWeek) {
+                    const weekday = daysOfWeek[dayBeforeAbfuhr.getDay()];
+                    if (tasksData[weekday]) {
+                        const taskText = `${art} rausstellen (${abfuhrDate.toLocaleDateString("de-DE")})`;
+                        if (!tasksData[weekday].some(t => t.text === taskText)) {
+                            tasksData[weekday].unshift({ id: crypto.randomUUID(), text: taskText, checked: false });
+                        }
+                    }
+                }
+            });
+            return tasksData;
+        }
+        
+        function resetWeeklyAndDailyTasks(tasksData) {
+            const updatedData = JSON.parse(JSON.stringify(tasksData));
+            const days = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
+            days.forEach(day => {
+                if (updatedData[day]) {
+                    updatedData[day].forEach(task => {
+                        // Setzt wöchentliche und tägliche Aufgaben zurück
+                        if (task.isWeekly || task.isDaily) {
+                            task.checked = false;
+                        }
+                    });
+                }
+            });
+            return updatedData;
+        }
+        
+        function processTasksData(tasksDataFromDb) {
+            const dateToday = new Date();
+            const startOfThisWeek = getStartOfWeek(dateToday).toISOString().split('T')[0];
+            const lastResetWeek = localStorage.getItem('lastWeekReset');
+
+            let processedData = tasksDataFromDb;
+            if (lastResetWeek !== startOfThisWeek) {
+                processedData = resetWeeklyAndDailyTasks(processedData);
+                localStorage.setItem('lastWeekReset', startOfThisWeek);
+            }
+
+            processedData = initializeDataWithAbfuhrtermine(processedData);
+            return processedData;
+        }
+
+        document.addEventListener("DOMContentLoaded", async function () {
+            const dateToday = new Date();
+            document.getElementById("date").textContent = dateToday.toLocaleDateString("de-DE", {
+                weekday: "long", year: "numeric", month: "long", day: "numeric"
+            });
+
+            const daysOrder = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+            const currentDayIndex = dateToday.getDay();
+            const container = document.getElementById("container");
+            const specialTasksDiv = document.getElementById('special-tasks-div');
+            const dayDivs = {};
+            document.querySelectorAll('.day').forEach(div => {
+                dayDivs[div.id] = div;
+                div.remove();
+            });
+
+            const orderedDays = daysOrder.slice(currentDayIndex).concat(daysOrder.slice(0, currentDayIndex));
+            orderedDays.forEach(dayName => {
+                if (dayDivs[dayName]) {
+                    container.appendChild(dayDivs[dayName]);
+                }
+            });
+            container.appendChild(specialTasksDiv);
+
+            try {
+                await signInAnonymously(auth);
+                
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        const docRef = doc(db, tasksCollectionName, sharedDocumentId);
+                        
+                        let isFirstLoad = true;
+                        onSnapshot(docRef, (docSnapshot) => {
+                            let tasksData;
+                            if (docSnapshot.exists()) {
+                                tasksData = docSnapshot.data();
+                            } else {
+                                // Wenn das Dokument nicht existiert, erstelle es mit den Startdaten
+                                console.log("Kein Plan gefunden, erstelle einen neuen.");
+                                tasksData = JSON.parse(JSON.stringify(initialTasksData));
+                            }
+                            
+                            const processedData = processTasksData(tasksData);
+
+                            if (isFirstLoad) {
+                                setupEventListeners(processedData);
+                                isFirstLoad = false;
+                            }
+                            
+                            // Nur speichern, wenn sich die Daten nach der Verarbeitung geändert haben
+                            if (JSON.stringify(tasksData) !== JSON.stringify(processedData)) {
+                                saveData(processedData);
+                            }
+                            
+                            renderTasks(processedData);
+                            loadingOverlay.style.display = 'none';
+                        }, (error) => {
+                            showErrorModal("Fehler beim Laden der Daten: " + error.message);
+                            console.error("Fehler beim onSnapshot:", error);
+                            loadingOverlay.style.display = 'none';
+                        });
+                    } else {
+                        showErrorModal("Benutzer nicht authentifiziert. Bitte versuche, die Seite neu zu laden.");
+                        loadingOverlay.style.display = 'none';
+                    }
+                });
+
+            } catch (e) {
+                if (e.code === 'auth/configuration-not-found' || e.message.includes("apiKey")) {
+                    showErrorModal("FEHLER: Die Firebase-Konfiguration ist ungültig oder unvollständig. Bitte überprüfe, ob du deine Daten aus Schritt 1 korrekt eingefügt hast.");
+                } else {
+                    showErrorModal("Kritischer Fehler bei der App-Initialisierung: " + e.message);
+                }
+                console.error("Kritischer Fehler bei der App-Initialisierung:", e);
+                loadingOverlay.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
